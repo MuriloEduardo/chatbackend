@@ -44,15 +44,48 @@ let server = http.createServer(app);
 
 io = io.listen(server);
 
-io.on('connection', (socket) => {
-  console.log('user %s connected', socket.id);
-  
+io.sockets.on('connection', (socket) => {
+
+  // SET'S //
+  //////////
+  socket.on('set:user', (user) => {
+    //socket.id = user._id;
+    socket.nome = user.nome;
+
+    // "Callback" para dar boas vindas ao usuario que entrou
+    socket.emit('set:user', {socketId: socket.id});
+    
+    //console.log('Set:user %s', user.nome);
+    //console.log('User %s connected', socket.id);
+  });
+
+  socket.on('set:room', (room) => {
+    socket.room = room;
+    socket.join(room);
+
+    // "Callback" para dar boas vindas ao usuario que entrou
+    io.sockets.in(room).emit('join:room', {id: socket.id, nome: socket.nome});
+
+    console.log(io.sockets.adapter.rooms)
+    console.log(room)
+  });
+
+  // CHANGE'S //
+  /////////////
+
+  // NEW'S //
+  //////////
+  socket.on('new:message', (message) => {
+    io.emit('message', {type:'new-message', text: message});    
+  });
+
+  // ANY'S //
+  //////////
   socket.on('disconnect', function(){
     console.log('user %s disconnected', socket.id);
-  });
-  
-  socket.on('add-message', (message) => {
-    io.emit('message', {type:'new-message', text: message});    
+    socket.broadcast.to(socket.room).emit('left:room', {id: socket.id, nome: socket.nome});
+
+    socket.leave(socket.room);
   });
 });
 
